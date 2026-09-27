@@ -1,6 +1,7 @@
 # Image Mask Editor
 
-This edit helps to correct mask predicted by segmentation model to feed the manual corrected data to next version of the model.
+This tool helps to correct mask predicted by segmentation model to feed the manual corrected data to next version of the model.
+
 
 These are the following feature it supports:
 - Load images and mask PNGs, with masks matched by filename or selected manually.
