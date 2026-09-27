@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111318">
+  <title>Mask Editor</title>
+  <style>
+    :root { color-scheme: dark; --bg:#111318; --panel:#191c23; --panel-2:#20242d; --line:#303540; --muted:#9aa2b2; --text:#eef0f5; --accent:#9b8cff; --green:#77d7b4; }
+    * { box-sizing:border-box }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; height:100vh; overflow:hidden }
+    button,input { font:inherit }
+    button { border:1px solid var(--line); color:var(--text); background:var(--panel-2); border-radius:8px; padding:8px 11px; cursor:pointer; transition:background .15s,border-color .15s }
+    button:hover { background:#2a2f3a; border-color:#4b5261 }
+    button:disabled { opacity:.42; cursor:not-allowed }
+    button.active { color:#e7e2ff; background:#373153; border-color:#695da4 }
+    .app { height:100vh; display:grid; grid-template-rows:56px 1fr 30px; min-width:700px }
+    header { display:flex; align-items:center; gap:18px; padding:0 18px; background:#171920; border-bottom:1px solid var(--line) }
+    .brand { display:flex; align-items:center; gap:10px; font-weight:650; letter-spacing:.01em; white-space:nowrap }
+    .brand-icon { display:grid; place-items:center; width:28px; height:28px; color:#e6e0ff; background:#383152; border:1px solid #584e80; border-radius:8px }
+    .top-actions { display:flex; align-items:center; gap:8px; margin-left:auto }
+    .top-actions button { padding:7px 10px; font-size:13px }
+    .shortcut { color:var(--muted); font-size:12px }
+    .layout { min-height:0; display:grid; grid-template-columns:260px 1fr 278px }
+    aside { min-height:0; background:var(--panel); display:flex; flex-direction:column }
+    .left { border-right:1px solid var(--line) }
+    .right { border-left:1px solid var(--line); overflow:auto }
+    .section-head { display:flex; align-items:center; justify-content:space-between; padding:16px 15px 11px; color:#dce0e8; font-size:12px; font-weight:650; letter-spacing:.08em; text-transform:uppercase }
+    .count { color:var(--muted); font-size:11px; font-weight:500; letter-spacing:0 }
+    .import-box { margin:4px 12px 12px; padding:16px 12px; text-align:center; border:1px dashed #454b59; border-radius:10px; color:var(--muted); font-size:12px; line-height:1.6 }
+    .import-box strong { display:block; color:#e5e7ee; font-size:13px; font-weight:550; margin-bottom:4px }
+    .import-actions { display:flex; gap:7px; justify-content:center; margin-top:12px }
+    .import-actions button { font-size:11px; padding:6px 8px }
+    .file-list { overflow:auto; padding:0 8px 12px }
+    .file-item { width:100%; display:flex; align-items:center; gap:10px; text-align:left; padding:7px; margin-bottom:3px; border-color:transparent; background:transparent }
+    .file-item.selected { border-color:#51477a; background:#2b2740 }
+    .thumb { width:46px; height:38px; flex:none; display:grid; place-items:center; overflow:hidden; border:1px solid #383d48; border-radius:5px; color:#717989; background-color:#222630; background-image:linear-gradient(45deg,#292e38 25%,transparent 25%),linear-gradient(-45deg,#292e38 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#292e38 75%),linear-gradient(-45deg,transparent 75%,#292e38 75%); background-size:12px 12px; background-position:0 0,0 6px,6px -6px,-6px 0 }
+    .thumb img { width:100%; height:100%; object-fit:contain }
+    .file-meta { min-width:0 }
+    .file-name { display:block; overflow:hidden; color:#e3e6ed; font-size:12px; text-overflow:ellipsis; white-space:nowrap }
+    .file-sub { display:block; color:var(--muted); font-size:11px; margin-top:2px }
+    .empty-list { padding:12px; color:var(--muted); font-size:12px; text-align:center }
+    main { min-height:0; display:grid; grid-template-rows:44px 1fr 48px; background:#101217 }
+    .viewer-head { display:flex; align-items:center; gap:12px; padding:0 14px; background:#171920; border-bottom:1px solid #292d36; min-width:0 }
+    .crumb { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#e5e7ed; font-size:12px }
+    .crumb span { color:var(--muted) }
+    .view-modes { display:flex; gap:3px; margin-left:auto }
+    .view-modes button { padding:5px 9px; font-size:11px; border-radius:6px }
+    .canvas-area { min-height:0; position:relative; overflow:hidden; display:grid; place-items:center; background-color:#111318; background-image:radial-gradient(#292d36 .7px,transparent .7px); background-size:15px 15px }
+    .canvas-stack { position:relative; display:flex; align-items:center; justify-content:center; max-width:100%; max-height:100%; gap:16px; transform-origin:0 0 }
+    .image-panel { position:relative; display:none; max-width:calc(50vw - 170px); max-height:calc(100vh - 200px); box-shadow:0 8px 28px #0007 }
+    .image-panel img { display:block; max-width:100%; max-height:calc(100vh - 200px); object-fit:contain; image-rendering:auto }
+    .image-panel .mask-layer { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; opacity:.5; mix-blend-mode:screen; pointer-events:none }
+    .image-panel .edit-layer { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; touch-action:none }
+    .image-panel.editing .edit-layer { pointer-events:auto; cursor:crosshair }
+    .brush-cursor { position:absolute; display:none; z-index:2; transform:translate(-50%,-50%); border:1px solid #fff; border-radius:50%; box-shadow:0 0 0 1px #101217,0 1px 4px #000b; pointer-events:none }
+    .image-panel .panel-label { position:absolute; left:8px; top:8px; padding:4px 7px; border-radius:5px; color:#f2f3f7; background:#111c; font-size:10px }
+    .canvas-stack.mode-overlay .image-panel.overlay-view { display:block; max-width:calc(100% - 32px); max-height:calc(100% - 32px) }
+    .canvas-stack.mode-overlay .overlay-view img { max-height:calc(100vh - 200px) }
+    .canvas-stack.mode-side .image-panel.side-image, .canvas-stack.mode-side .image-panel.side-mask { display:block }
+    .canvas-stack.mode-side .side-mask > img:first-child { image-rendering:pixelated }
+    .canvas-stack.mode-side .side-mask img { max-height:calc(100vh - 200px) }
+    .welcome { max-width:440px; padding:30px; text-align:center; color:var(--muted) }
+    .welcome-icon { width:48px; height:48px; margin:0 auto 16px; display:grid; place-items:center; border:1px solid #393d49; border-radius:14px; color:#b8acff; background:#242232 }
+    .welcome h1 { margin:0 0 8px; color:#e8eaf0; font-size:18px; font-weight:600 }
+    .welcome p { margin:0; font-size:13px }
+    .welcome .primary { margin-top:18px; background:#574b88; border-color:#7063a6 }
+    .drop-hint { display:none; position:absolute; inset:14px; place-items:center; border:2px dashed #897bd2; border-radius:14px; background:#242232dd; color:#eeeaff; font-size:18px; z-index:3; pointer-events:none }
+    .canvas-area.dragover .drop-hint { display:grid }
+    .viewer-foot { display:flex; align-items:center; gap:9px; padding:0 14px; border-top:1px solid #292d36; background:#171920 }
+    .editor-tools { display:flex; align-items:center; gap:5px; padding-left:10px; border-left:1px solid var(--line) }
+    .editor-tools button { padding:5px 8px; font-size:11px }
+    .editor-tools input[type=range] { width:70px }
+    #saveMask { background:#393252; border-color:#5f548a }
+    .nav-buttons { display:flex; gap:5px }
+    .nav-buttons button { width:29px; height:28px; padding:0 }
+    .position { color:var(--muted); font-size:11px; min-width:48px }
+    .slider-group { display:flex; align-items:center; gap:8px; margin-left:auto; color:var(--muted); font-size:11px }
+    input[type=range] { accent-color:#a394ff; width:100px }
+    .opacity-label { width:28px; color:#c7cbd4; text-align:right }
+    .zoom-controls { display:flex; align-items:center; gap:4px; padding-left:12px; border-left:1px solid var(--line) }
+    .zoom-controls button { width:26px; height:26px; padding:0 }
+    .zoom-level { min-width:40px; text-align:center; color:var(--muted); font-size:11px }
+    .right .section-head { padding-bottom:12px }
+    .panel-section { padding:0 14px 17px; border-bottom:1px solid var(--line); margin-bottom:4px }
+    .field-label { display:block; margin:10px 0 6px; color:var(--muted); font-size:11px }
+    .select { width:100%; padding:8px 9px; color:var(--text); background:#222630; border:1px solid #383d48; border-radius:7px; font-size:12px }
+    .color-row { display:flex; align-items:center; gap:9px; margin-top:12px }
+    input[type=color] { width:30px; height:28px; padding:2px; border:1px solid #444a57; border-radius:6px; background:#222630 }
+    .color-row span { color:#ccd0d9; font-size:12px }
+    .toggle-row { display:flex; align-items:center; justify-content:space-between; margin-top:12px; color:#cdd1da; font-size:12px }
+    .toggle { appearance:none; position:relative; width:31px; height:18px; border:1px solid #4b505d; border-radius:12px; background:#30343e; cursor:pointer }
+    .toggle::after { content:""; position:absolute; width:12px; height:12px; left:2px; top:2px; border-radius:50%; background:#a2a8b4; transition:transform .16s }
+    .toggle:checked { background:#63569a; border-color:#8274ba }
+    .toggle:checked::after { transform:translateX(13px); background:white }
+    .info-row { display:flex; justify-content:space-between; gap:8px; padding:7px 0; border-bottom:1px solid #2a2e38; color:var(--muted); font-size:11px }
+    .info-row:last-child { border:0 }
+    .info-row b { overflow:hidden; color:#dce0e8; font-weight:450; text-overflow:ellipsis; white-space:nowrap; text-align:right }
+    .statusbar { display:flex; align-items:center; gap:15px; padding:0 12px; color:#8f96a4; background:#171920; border-top:1px solid var(--line); font-size:10px }
+    .status-spacer { margin-left:auto }
+    .dot { display:inline-block; width:6px; height:6px; margin-right:5px; border-radius:50%; background:var(--green) }
+    input[type=file] { display:none }
+    @media(max-width:1000px) { .layout { grid-template-columns:220px 1fr 230px } .image-panel { max-width:calc(50vw - 130px) } }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute"><filter id="maskTintFilter" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .2126 .7152 .0722 0 0" result="maskAlpha"/><feFlood id="maskTintFlood" flood-color="#ff3f65" result="tint"/><feComposite in="tint" in2="maskAlpha" operator="in"/></filter></svg>
+  <div class="app">
+    <header>
+      <div class="brand"><div class="brand-icon">◩</div><span>Mask Editor</span></div>
+      <span class="shortcut">Image + mask inspection</span>
+      <div class="top-actions">
+        <button id="chooseSaveFolder" title="Choose the folder where edited masks are saved">Save folder</button>
+        <button id="addImages">＋ Add images</button>
+        <button id="addMasks">＋ Add masks</button>
+        <button id="clearAll">Clear</button>
+      </div>
+    </header>
+    <div class="layout">
+      <aside class="left">
+        <div class="section-head">Images <span class="count" id="imageCount">0 images</span></div>
+        <div class="import-box"><strong>Start with your images</strong>Choose images and matching mask PNGs from your computer.<div class="import-actions"><button id="importImages">Choose images</button><button id="importMasks">Choose masks</button></div></div>
+        <div class="file-list" id="fileList"><div class="empty-list">Your image list will appear here.</div></div>
+      </aside>
+      <main>
+        <div class="viewer-head">
+          <div class="crumb" id="crumb">No image loaded <span> / </span> Add images to begin</div>
+          <div class="view-modes"><button id="overlayMode" class="active">Overlay</button><button id="sideMode">Side by side</button></div>
+        </div>
+        <div class="canvas-area" id="canvasArea">
+          <div class="welcome" id="welcome"><div class="welcome-icon">◩</div><h1>Inspect your masks</h1><p>Load images and mask PNGs to see them together. Files are matched by name when possible.</p><button class="primary" id="welcomeImport">Choose images</button></div>
+          <div class="canvas-stack mode-overlay" id="canvasStack">
+            <div class="image-panel overlay-view" id="overlayPanel"><img id="mainImage" alt="Selected image"><img class="mask-layer" id="overlayMask" alt="Mask overlay"><canvas class="edit-layer" id="editCanvas"></canvas><div class="brush-cursor" id="brushCursor"></div><span class="panel-label">IMAGE + MASK</span></div>
+            <div class="image-panel side-image"><img id="sideImage" alt="Image"><span class="panel-label">IMAGE</span></div>
+            <div class="image-panel side-mask"><img id="sideMask" alt="Mask"><span class="panel-label">MASK</span></div>
+          </div>
+          <div class="drop-hint">Drop images or masks here</div>
+        </div>
+        <div class="viewer-foot">
+          <div class="nav-buttons"><button id="prevImage" title="Previous image (←)">‹</button><button id="nextImage" title="Next image (→)">›</button></div>
+          <span class="position" id="position">0 / 0</span>
+          <div class="editor-tools"><button id="editToggle" title="Paint on the mask">Edit mask</button><button id="drawTool" class="active" title="Draw mask pixels (Ctrl+D)">Draw</button><button id="eraseTool" title="Erase mask pixels (Ctrl+E)">Erase</button><span class="shortcut">Size</span><input id="brushSize" type="range" min="1" max="200" value="24" title="Brush size in pixels; scroll over image to adjust"><button id="saveMask" title="Save mask PNG (Ctrl+S)">Save PNG</button></div>
+          <div class="slider-group"><span>Mask opacity</span><input id="opacitySlider" type="range" min="0" max="100" value="50"><span class="opacity-label" id="opacityValue">50%</span></div>
+          <div class="zoom-controls"><button id="zoomOut" title="Zoom out">−</button><span class="zoom-level" id="zoomLevel">100%</span><button id="zoomIn" title="Zoom in">＋</button><button id="fitView" title="Fit view">Fit</button></div>
+        </div>
+      </main>
+      <aside class="right">
+        <div class="section-head">Display</div>
+        <div class="panel-section">
+          <label class="field-label" for="maskSelect">Mask for current image</label>
+          <select class="select" id="maskSelect"><option value="">No mask selected</option></select>
+          <div class="color-row"><input type="color" id="maskColor" value="#ff3f65"><span>Mask tint</span></div>
+          <div class="toggle-row"><span>Show mask overlay</span><input class="toggle" id="showMask" type="checkbox" checked></div>
+          <div class="toggle-row"><span>Nearest neighbor scaling</span><input class="toggle" id="pixelated" type="checkbox"></div>
+        </div>
+        <div class="section-head">Image details</div>
+        <div class="panel-section" id="details"><div class="info-row"><span>Image</span><b>—</b></div><div class="info-row"><span>Dimensions</span><b>—</b></div><div class="info-row"><span>Mask</span><b>—</b></div><div class="info-row"><span>Mask dimensions</span><b>—</b></div></div>
+        <div class="section-head">Tips</div>
+        <div class="panel-section" style="color:var(--muted);font-size:11px;line-height:1.7">Mask PNGs are matched to images by filename. You can also choose a mask manually from the dropdown. Use the opacity slider to tune the overlay.</div>
+      </aside>
+    </div>
+    <div class="statusbar"><span><i class="dot"></i>Ready</span><span id="statusText">No files loaded</span><span class="status-spacer"></span><span>A / D Navigate</span><span>Alt+E Clear mask</span><span>Ctrl+Z Undo</span><span>Scroll Brush</span><span>Ctrl+Scroll Zoom</span><span>Ctrl+S Save</span></div>
+  </div>
+  <input id="imageInput" type="file" accept="image/*" multiple>
+  <input id="maskInput" type="file" accept="image/png,image/*" multiple>
+  <script>
+    (() => {
+      const images = [], masks = [], maskEdits = new Map();
+      let current = -1, mode = 'overlay', zoom = 1, panX = 0, panY = 0, editing = false, brush = 'draw', drawing = false, editLoadToken = 0, lastPointer = null;
+      let saveDirectory = null;
+      const $ = id => document.getElementById(id);
+      const imageInput = $('imageInput'), maskInput = $('maskInput');
+      function openHandleDb(){return new Promise((resolve,reject)=>{const req=indexedDB.open('mask-editor-settings',1);req.onupgradeneeded=()=>req.result.createObjectStore('settings');req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);});}
+      async function storeSaveDirectory(handle){const db=await openHandleDb();return new Promise((resolve,reject)=>{const tx=db.transaction('settings','readwrite');tx.objectStore('settings').put(handle,'saveDirectory');tx.oncomplete=()=>{db.close();resolve();};tx.onerror=()=>{db.close();reject(tx.error);};});}
+      async function loadSaveDirectory(){try{const db=await openHandleDb();const value=await new Promise((resolve,reject)=>{const req=db.transaction('settings').objectStore('settings').get('saveDirectory');req.onsuccess=()=>resolve(req.result||null);req.onerror=()=>reject(req.error);});db.close();return value;}catch{return null;}}
+      function showFolderStatus(){ $('statusText').textContent=saveDirectory?`Save folder: ${saveDirectory.name}`:'No save folder selected'; }
+      loadSaveDirectory().then(handle=>{if(handle){saveDirectory=handle;showFolderStatus();}});
+      const byName = name => name.toLowerCase().replace(/\.[^.]+$/, '').replace(/(?:_mask|-mask|\.mask|_label|_segmentation)$/i, '').replace(/[_\-. ]+/g, '');
+      const imageExt = /\.(png|jpe?g|webp|bmp|gif|tiff?)$/i;
+      function addFiles(files, target) {
+        [...files].forEach(file => {
+          if (!file.type.startsWith('image/')) return;
+          const url = URL.createObjectURL(file);
+          target.push({file, url, name:file.name, key:byName(file.name), width:0, height:0});
+          const item = target[target.length - 1], probe = new Image();
+          probe.onload = () => { item.width = probe.naturalWidth; item.height = probe.naturalHeight; if (target === images && current >= 0) render(); };
+          probe.src = url;
+        });
+        if (target === images && images.length && current < 0) current = 0;
+        render();
+      }
+      function guessMask(image) {
+        if (!image) return null;
+        const exact = masks.find(m => m.key === image.key);
+        if (exact) return exact;
+        return masks.find(m => m.key.startsWith(image.key) || image.key.startsWith(m.key)) || null;
+      }
+      function selectedMask(image) {
+        const chosen = $('maskSelect').value;
+        return chosen ? masks.find(m => m.url === chosen) || null : guessMask(image);
+      }
+      function ensureEditCanvas(image, mask) {
+        const canvas=$('editCanvas');
+        if (!image || !image.width || !image.height) return;
+        let edit=maskEdits.get(image.url);
+        if (edit && edit.maskUrl === (mask?.url || '')) { paintEditCanvas(edit); return; }
+        maskEdits.delete(image.url);
+        const token=++editLoadToken, work=document.createElement('canvas'); work.width=image.width; work.height=image.height;
+        const ctx=work.getContext('2d');
+        const finish=()=>{
+          if(token!==editLoadToken) return;
+          const pixels=ctx.getImageData(0,0,work.width,work.height), d=pixels.data;
+          for(let i=0;i<d.length;i+=4){const luminance=(.2126*d[i]+.7152*d[i+1]+.0722*d[i+2])*d[i+3]/255;d[i]=255;d[i+1]=255;d[i+2]=255;d[i+3]=luminance>=128?255:0;}
+          ctx.putImageData(pixels,0,0);
+          edit={canvas:work,maskUrl:mask?.url||'',undo:[]}; maskEdits.set(image.url,edit); paintEditCanvas(edit);
+        };
+        if(mask){const source=new Image(); source.onload=()=>{ctx.drawImage(source,0,0,work.width,work.height); finish();}; source.onerror=finish; source.src=mask.url;}
+        else finish();
+      }
+      function paintEditCanvas(edit) {
+        const canvas=$('editCanvas'); if(!edit)return;
+        canvas.width=edit.canvas.width; canvas.height=edit.canvas.height;
+        canvas.getContext('2d').drawImage(edit.canvas,0,0);
+        canvas.style.opacity=Number($('opacitySlider').value)/100;
+        canvas.style.filter='url(#maskTintFilter)';
+        $('overlayMask').style.display='none';
+      }
+      function snapshotMask(edit){
+        const rgba=edit.canvas.getContext('2d').getImageData(0,0,edit.canvas.width,edit.canvas.height).data;
+        const alpha=new Uint8Array(rgba.length/4);
+        for(let i=0,j=3;i<alpha.length;i++,j+=4)alpha[i]=rgba[j];
+        edit.undo.push(alpha); if(edit.undo.length>10)edit.undo.shift();
+      }
+      function undoMask(edit){
+        const alpha=edit.undo.pop(); if(!alpha)return false;
+        const ctx=edit.canvas.getContext('2d'), pixels=ctx.createImageData(edit.canvas.width,edit.canvas.height), rgba=pixels.data;
+        for(let i=0,j=0;i<alpha.length;i++,j+=4){rgba[j]=255;rgba[j+1]=255;rgba[j+2]=255;rgba[j+3]=alpha[i];}
+        ctx.putImageData(pixels,0,0); paintEditCanvas(edit); return true;
+      }
+      function updateSelect(image, mask) {
+        const select = $('maskSelect'), prior = select.value;
+        select.innerHTML = '<option value="">Auto match / no mask</option>';
+        masks.forEach(m => { const o=document.createElement('option'); o.value=m.url; o.textContent=m.name; select.append(o); });
+        select.value = masks.some(m => m.url === prior) ? prior : (mask ? mask.url : '');
+        if (!masks.length) select.innerHTML = '<option value="">No masks loaded</option>';
+      }
+      function render() {
+        const image = images[current] || null;
+        $('imageCount').textContent = `${images.length} image${images.length === 1 ? '' : 's'}`;
+        $('fileList').innerHTML = images.length ? '' : '<div class="empty-list">Your image list will appear here.</div>';
+        images.forEach((item, i) => {
+          const b=document.createElement('button'); b.className='file-item'+(i===current?' selected':'');
+          const thumb=document.createElement('span'); thumb.className='thumb'; const img=document.createElement('img'); img.src=item.url; thumb.append(img);
+          const meta=document.createElement('span'); meta.className='file-meta'; const name=document.createElement('span'); name.className='file-name'; name.textContent=item.name; const sub=document.createElement('span'); sub.className='file-sub'; sub.textContent=item.width ? `${item.width} × ${item.height}` : 'Image'; meta.append(name,sub); b.append(thumb,meta); b.onclick=()=>{current=i; $('maskSelect').value=''; render();}; $('fileList').append(b);
+        });
+        const mask = selectedMask(image);
+        updateSelect(image, mask);
+        const resolvedMask = selectedMask(image);
+        ensureEditCanvas(image, resolvedMask);
+        $('welcome').style.display = image ? 'none' : 'block';
+        $('canvasStack').style.display = image ? 'flex' : 'none';
+        $('mainImage').src = image ? image.url : '';
+        $('sideImage').src = image ? image.url : '';
+        $('overlayMask').src = resolvedMask ? resolvedMask.url : '';
+        $('sideMask').src = resolvedMask ? resolvedMask.url : '';
+        $('overlayMask').style.display = $('showMask').checked && resolvedMask && !maskEdits.has(image?.url) ? 'block' : 'none';
+        $('editCanvas').style.display = image ? 'block' : 'none';
+        $('editCanvas').style.opacity = Number($('opacitySlider').value)/100;
+        $('overlayPanel').classList.toggle('editing', editing && mode==='overlay');
+        updateBrushCursor(lastPointer);
+        $('editToggle').classList.toggle('active', editing);
+        $('drawTool').classList.toggle('active', brush==='draw'); $('eraseTool').classList.toggle('active', brush==='erase');
+        ['editToggle','drawTool','eraseTool','saveMask','brushSize'].forEach(id=>$(id).disabled=!image);
+        $('sideMask').parentElement.style.display = resolvedMask ? '' : 'none';
+        $('overlayMask').style.opacity = Number($('opacitySlider').value)/100;
+        const color = $('maskColor').value; $('maskTintFlood').setAttribute('flood-color', color); $('overlayMask').style.filter = 'url(#maskTintFilter)'; $('overlayMask').style.mixBlendMode = 'normal';
+        $('overlayMask').style.imageRendering = $('pixelated').checked ? 'pixelated' : 'auto'; $('sideMask').style.imageRendering = $('pixelated').checked ? 'pixelated' : 'auto';
+        $('canvasStack').className = `canvas-stack mode-${mode}`;
+        $('overlayMode').classList.toggle('active', mode==='overlay'); $('sideMode').classList.toggle('active', mode==='side');
+        $('crumb').innerHTML = image ? `${escapeHtml(image.name)} <span> / </span> ${resolvedMask ? escapeHtml(resolvedMask.name) : 'No mask matched'}` : 'No image loaded <span> / </span> Add images to begin';
+        $('position').textContent = `${images.length ? current+1 : 0} / ${images.length}`;
+        $('prevImage').disabled = $('nextImage').disabled = images.length < 2;
+        $('statusText').textContent = image ? `${images.length} image${images.length===1?'':'s'} · ${masks.length} mask${masks.length===1?'':'s'}` : 'No files loaded';
+        $('details').innerHTML = `<div class="info-row"><span>Image</span><b title="${image?escapeHtml(image.name):''}">${image?escapeHtml(image.name):'—'}</b></div><div class="info-row"><span>Dimensions</span><b>${image&&image.width?`${image.width} × ${image.height}`:'—'}</b></div><div class="info-row"><span>Mask</span><b title="${resolvedMask?escapeHtml(resolvedMask.name):''}">${resolvedMask?escapeHtml(resolvedMask.name):'—'}</b></div><div class="info-row"><span>Mask dimensions</span><b>${resolvedMask&&resolvedMask.width?`${resolvedMask.width} × ${resolvedMask.height}`:'—'}</b></div>`;
+      }
+      function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+      function navigate(delta) { if (!images.length) return; current=(current+delta+images.length)%images.length; $('maskSelect').value=''; render(); }
+      function setZoom(v, anchorX, anchorY, reset=false) {
+        const areaRect=$('canvasArea').getBoundingClientRect(), stack=$('canvasStack'), rect=stack.getBoundingClientRect();
+        const x=anchorX??(areaRect.left+areaRect.width/2), y=anchorY??(areaRect.top+areaRect.height/2);
+        const baseX=rect.left-panX, baseY=rect.top-panY, next=Math.max(.25,Math.min(4,v));
+        if(reset){panX=0;panY=0;}
+        else if(zoom>0){panX=x-((x-rect.left)/zoom)*next-baseX;panY=y-((y-rect.top)/zoom)*next-baseY;}
+        zoom=next; $('zoomLevel').textContent=`${Math.round(zoom*100)}%`; stack.style.transform=`translate(${panX}px, ${panY}px) scale(${zoom})`;
+      }
+      $('addImages').onclick = $('importImages').onclick = $('welcomeImport').onclick = () => imageInput.click();
+      $('addMasks').onclick = $('importMasks').onclick = () => maskInput.click();
+      imageInput.onchange = e => { addFiles(e.target.files, images); e.target.value=''; };
+      maskInput.onchange = e => { addFiles(e.target.files, masks); e.target.value=''; };
+      $('clearAll').onclick = () => { [...images,...masks].forEach(f=>URL.revokeObjectURL(f.url)); images.length=0; masks.length=0; maskEdits.clear(); current=-1; editing=false; render(); };
+      $('prevImage').onclick = () => navigate(-1); $('nextImage').onclick = () => navigate(1);
+      $('overlayMode').onclick = () => { mode='overlay'; render(); }; $('sideMode').onclick = () => { mode='side'; render(); };
+      $('maskSelect').onchange = render; $('showMask').onchange = render; $('pixelated').onchange = render; $('maskColor').oninput = render;
+      $('opacitySlider').oninput = () => { $('opacityValue').textContent=`${$('opacitySlider').value}%`; render(); };
+      $('editToggle').onclick=()=>{editing=!editing; render();};
+      $('drawTool').onclick=()=>{brush='draw';render();}; $('eraseTool').onclick=()=>{brush='erase';render();};
+      $('editCanvas').addEventListener('pointerdown',e=>{
+        if(!editing||mode!=='overlay'||current<0)return;
+        const image=images[current], edit=maskEdits.get(image.url); if(!edit)return;
+        drawing=true; snapshotMask(edit); e.currentTarget.setPointerCapture(e.pointerId); updateBrushCursor(e); stroke(e,edit);
+      });
+      $('editCanvas').addEventListener('pointerenter',e=>updateBrushCursor(e));
+      $('editCanvas').addEventListener('pointermove',e=>{updateBrushCursor(e);if(drawing&&current>=0){const edit=maskEdits.get(images[current].url);if(edit)stroke(e,edit);}});
+      $('editCanvas').addEventListener('pointerleave',()=>{if(!drawing)$('brushCursor').style.display='none';});
+      $('editCanvas').addEventListener('pointerup',()=>drawing=false); $('editCanvas').addEventListener('pointercancel',()=>drawing=false);
+      function stroke(e,edit){
+        const canvas=$('editCanvas'), rect=canvas.getBoundingClientRect(), x=(e.clientX-rect.left)/rect.width*edit.canvas.width, y=(e.clientY-rect.top)/rect.height*edit.canvas.height;
+        const ctx=edit.canvas.getContext('2d'); ctx.globalCompositeOperation=brush==='erase'?'destination-out':'source-over'; ctx.fillStyle='#fff';
+        const radius=Number($('brushSize').value)/2; ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'; paintEditCanvas(edit);
+      }
+      function updateBrushCursor(e){
+        const cursor=$('brushCursor'),canvas=$('editCanvas');
+        if(!e){if(!editing||mode!=='overlay')cursor.style.display='none';return;}
+        lastPointer={clientX:e.clientX,clientY:e.clientY};
+        if(!editing||mode!=='overlay'||!images[current]||!canvas.width){cursor.style.display='none';return;}
+        const rect=canvas.getBoundingClientRect(), scale=canvas.clientWidth/canvas.width;
+        cursor.style.width=cursor.style.height=`${Math.max(4,Number($('brushSize').value)*scale)}px`;
+        cursor.style.left=`${(e.clientX-rect.left)/rect.width*canvas.clientWidth}px`;
+        cursor.style.top=`${(e.clientY-rect.top)/rect.height*canvas.clientHeight}px`;
+        cursor.style.display='block';
+      }
+      async function saveMask(){
+        const image=images[current], edit=image&&maskEdits.get(image.url); if(!edit)return;
+        const blob=await new Promise(resolve=>edit.canvas.toBlob(resolve,'image/png')); if(!blob)return;
+        const existing=selectedMask(image), suggestedName=existing?.name || image.name.replace(/\.[^.]+$/,'')+'_mask.png';
+        if(saveDirectory){
+          try{
+            let permission=await saveDirectory.queryPermission({mode:'readwrite'});
+            if(permission!=='granted') permission=await saveDirectory.requestPermission({mode:'readwrite'});
+            if(permission!=='granted'){$('statusText').textContent='Save folder permission was not granted';return;}
+            const fileHandle=await saveDirectory.getFileHandle(suggestedName,{create:true});
+            const writable=await fileHandle.createWritable(); await writable.write(blob); await writable.close();
+            $('statusText').textContent=`Saved ${suggestedName} to ${saveDirectory.name}`; return;
+          }catch(error){$('statusText').textContent=`Could not save ${suggestedName}: ${error.message}`;return;}
+        }
+        if(window.showSaveFilePicker){
+          try {
+            const handle=await window.showSaveFilePicker({suggestedName,types:[{description:'PNG image',accept:{'image/png':['.png']}}]});
+            const writable=await handle.createWritable(); await writable.write(blob); await writable.close();
+            $('statusText').textContent=`Saved ${handle.name}`; return;
+          } catch(error) { if(error.name==='AbortError')return; }
+        }
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=suggestedName;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      }
+      $('saveMask').onclick=saveMask;
+      $('chooseSaveFolder').onclick=async()=>{
+        if(!window.showDirectoryPicker){$('statusText').textContent='Folder memory is not supported in this browser';return;}
+        try{
+          const handle=await window.showDirectoryPicker({mode:'readwrite'});
+          const permission=await handle.requestPermission({mode:'readwrite'});
+          if(permission!=='granted'){$('statusText').textContent='Save folder permission was not granted';return;}
+          saveDirectory=handle;
+          try{await storeSaveDirectory(handle);showFolderStatus();}
+          catch{$('statusText').textContent=`Save folder ${handle.name} is set for this session, but could not be remembered after closing the app`;}
+        }catch(error){if(error.name!=='AbortError')$('statusText').textContent=`Could not set save folder: ${error.message}`;}
+      };
+      $('editCanvas').addEventListener('wheel',e=>{
+        if(e.ctrlKey)return;
+        if(!editing||mode!=='overlay')return;
+        e.preventDefault(); const range=$('brushSize'), step=e.shiftKey?10:2, delta=e.deltaY<0?step:-step;
+        range.value=String(Math.max(Number(range.min),Math.min(Number(range.max),Number(range.value)+delta)));
+        updateBrushCursor(e);
+      },{passive:false});
+      $('brushSize').oninput=()=>updateBrushCursor(lastPointer);
+      $('canvasArea').addEventListener('wheel',e=>{
+        if(!e.ctrlKey)return;
+        e.preventDefault(); setZoom(zoom*(e.deltaY<0?1.1:1/1.1),e.clientX,e.clientY);
+      },{passive:false});
+      $('zoomIn').onclick = () => setZoom(zoom*1.2); $('zoomOut').onclick = () => setZoom(zoom/1.2); $('fitView').onclick = () => setZoom(1,undefined,undefined,true);
+      document.addEventListener('keydown', e => {
+        if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase()==='e') { e.preventDefault(); const image=images[current],edit=image&&maskEdits.get(image.url); if(edit){snapshotMask(edit);edit.canvas.getContext('2d').clearRect(0,0,edit.canvas.width,edit.canvas.height);editing=true;paintEditCanvas(edit);render();$('statusText').textContent='Mask cleared · Ctrl+Z to undo';} return; }
+        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s') { e.preventDefault(); saveMask(); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z') { e.preventDefault(); const image=images[current],edit=image&&maskEdits.get(image.url); if(edit&&undoMask(edit))$('statusText').textContent='Last mask stroke undone'; return; }
+        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d') { e.preventDefault(); brush='draw'; editing=true; render(); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='e') { e.preventDefault(); brush='erase'; editing=true; render(); return; }
+        if (e.target.matches('input,select,textarea')) return;
+        if (e.key.toLowerCase()==='a') navigate(-1); if (e.key.toLowerCase()==='d') navigate(1);
+        if (e.key==='+'||e.key==='=') setZoom(zoom*1.2); if (e.key==='-') setZoom(zoom/1.2);
+      });
+      const area=$('canvasArea');
+      ['dragenter','dragover'].forEach(ev=>area.addEventListener(ev,e=>{e.preventDefault();area.classList.add('dragover');}));
+      ['dragleave','drop'].forEach(ev=>area.addEventListener(ev,e=>{e.preventDefault();area.classList.remove('dragover');}));
+      area.addEventListener('drop',e=>{const files=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/')); if(!files.length)return; const picked=files.filter(f=>f.name.toLowerCase().includes('mask')||f.name.toLowerCase().includes('label')); addFiles(files.filter(f=>!picked.includes(f)),images); addFiles(picked,masks);});
+      render();
+    })();
+  </script>
+</body>
+</html>
