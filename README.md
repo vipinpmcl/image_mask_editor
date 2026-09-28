@@ -10,5 +10,5 @@ These are the following feature it supports:
 - Scroll to change brush size; use Ctrl+scroll to zoom toward the pointer.
 - Undo the last stroke with Ctrl+Z; clear the mask with Alt+E.
 - Navigate images with A/D.
-- Save masks as PNGs with Ctrl+S, using a remembered save folder.
+- Save the current mask with the Save PNG button, or save all edited masks with Ctrl+S, using a remembered save folder.
 - Customize mask tint and opacity.

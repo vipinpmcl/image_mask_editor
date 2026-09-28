@@ -27,10 +27,6 @@
     .right { border-left:1px solid var(--line); overflow:auto }
     .section-head { display:flex; align-items:center; justify-content:space-between; padding:16px 15px 11px; color:#dce0e8; font-size:12px; font-weight:650; letter-spacing:.08em; text-transform:uppercase }
     .count { color:var(--muted); font-size:11px; font-weight:500; letter-spacing:0 }
-    .import-box { margin:4px 12px 12px; padding:16px 12px; text-align:center; border:1px dashed #454b59; border-radius:10px; color:var(--muted); font-size:12px; line-height:1.6 }
-    .import-box strong { display:block; color:#e5e7ee; font-size:13px; font-weight:550; margin-bottom:4px }
-    .import-actions { display:flex; gap:7px; justify-content:center; margin-top:12px }
-    .import-actions button { font-size:11px; padding:6px 8px }
     .file-list { overflow:auto; padding:0 8px 12px }
     .file-item { width:100%; display:flex; align-items:center; gap:10px; text-align:left; padding:7px; margin-bottom:3px; border-color:transparent; background:transparent }
     .file-item.selected { border-color:#51477a; background:#2b2740 }
@@ -64,7 +60,6 @@
     .welcome-icon { width:48px; height:48px; margin:0 auto 16px; display:grid; place-items:center; border:1px solid #393d49; border-radius:14px; color:#b8acff; background:#242232 }
     .welcome h1 { margin:0 0 8px; color:#e8eaf0; font-size:18px; font-weight:600 }
     .welcome p { margin:0; font-size:13px }
-    .welcome .primary { margin-top:18px; background:#574b88; border-color:#7063a6 }
     .drop-hint { display:none; position:absolute; inset:14px; place-items:center; border:2px dashed #897bd2; border-radius:14px; background:#242232dd; color:#eeeaff; font-size:18px; z-index:3; pointer-events:none }
     .canvas-area.dragover .drop-hint { display:grid }
     .viewer-foot { display:flex; align-items:center; gap:9px; padding:0 14px; border-top:1px solid #292d36; background:#171920 }
@@ -85,6 +80,7 @@
     .panel-section { padding:0 14px 17px; border-bottom:1px solid var(--line); margin-bottom:4px }
     .field-label { display:block; margin:10px 0 6px; color:var(--muted); font-size:11px }
     .select { width:100%; padding:8px 9px; color:var(--text); background:#222630; border:1px solid #383d48; border-radius:7px; font-size:12px }
+    .remove-mask { width:100%; margin-top:9px; color:#f0b5bd; border-color:#654047; background:#302127; font-size:12px }
     .color-row { display:flex; align-items:center; gap:9px; margin-top:12px }
     input[type=color] { width:30px; height:28px; padding:2px; border:1px solid #444a57; border-radius:6px; background:#222630 }
     .color-row span { color:#ccd0d9; font-size:12px }
@@ -119,16 +115,15 @@
     <div class="layout">
       <aside class="left">
         <div class="section-head">Images <span class="count" id="imageCount">0 images</span></div>
-        <div class="import-box"><strong>Start with your images</strong>Choose images and matching mask PNGs from your computer.<div class="import-actions"><button id="importImages">Choose images</button><button id="importMasks">Choose masks</button></div></div>
         <div class="file-list" id="fileList"><div class="empty-list">Your image list will appear here.</div></div>
       </aside>
       <main>
         <div class="viewer-head">
           <div class="crumb" id="crumb">No image loaded <span> / </span> Add images to begin</div>
-          <div class="view-modes"><button id="overlayMode" class="active">Overlay</button><button id="sideMode">Side by side</button></div>
+          <div class="view-modes"><button id="overlayMode" class="active" title="Overlay view (Ctrl+Q temporarily hides the mask)">Overlay</button><button id="sideMode">Side by side</button></div>
         </div>
         <div class="canvas-area" id="canvasArea">
-          <div class="welcome" id="welcome"><div class="welcome-icon">◩</div><h1>Inspect your masks</h1><p>Load images and mask PNGs to see them together. Files are matched by name when possible.</p><button class="primary" id="welcomeImport">Choose images</button></div>
+          <div class="welcome" id="welcome"><div class="welcome-icon">◩</div><h1>Inspect your masks</h1><p>Use Add images and Add masks in the top right to get started. Files are matched by name when possible.</p></div>
           <div class="canvas-stack mode-overlay" id="canvasStack">
             <div class="image-panel overlay-view" id="overlayPanel"><img id="mainImage" alt="Selected image"><img class="mask-layer" id="overlayMask" alt="Mask overlay"><canvas class="edit-layer" id="editCanvas"></canvas><div class="brush-cursor" id="brushCursor"></div><span class="panel-label">IMAGE + MASK</span></div>
             <div class="image-panel side-image"><img id="sideImage" alt="Image"><span class="panel-label">IMAGE</span></div>
@@ -139,7 +134,7 @@
         <div class="viewer-foot">
           <div class="nav-buttons"><button id="prevImage" title="Previous image (←)">‹</button><button id="nextImage" title="Next image (→)">›</button></div>
           <span class="position" id="position">0 / 0</span>
-          <div class="editor-tools"><button id="editToggle" title="Paint on the mask">Edit mask</button><button id="drawTool" class="active" title="Draw mask pixels (Ctrl+D)">Draw</button><button id="eraseTool" title="Erase mask pixels (Ctrl+E)">Erase</button><span class="shortcut">Size</span><input id="brushSize" type="range" min="1" max="200" value="24" title="Brush size in pixels; scroll over image to adjust"><button id="saveMask" title="Save mask PNG (Ctrl+S)">Save PNG</button></div>
+          <div class="editor-tools"><button id="editToggle" title="Paint on the mask">Edit mask</button><span class="shortcut" title="Ctrl+left click draws; left click erases">Ctrl+click draw · Click erase</span><span class="shortcut">Size</span><input id="brushSize" type="range" min="1" max="200" value="24" title="Brush size in pixels; scroll over image to adjust"><button id="saveMask" title="Save the current mask PNG">Save PNG</button></div>
           <div class="slider-group"><span>Mask opacity</span><input id="opacitySlider" type="range" min="0" max="100" value="50"><span class="opacity-label" id="opacityValue">50%</span></div>
           <div class="zoom-controls"><button id="zoomOut" title="Zoom out">−</button><span class="zoom-level" id="zoomLevel">100%</span><button id="zoomIn" title="Zoom in">＋</button><button id="fitView" title="Fit view">Fit</button></div>
         </div>
@@ -149,6 +144,7 @@
         <div class="panel-section">
           <label class="field-label" for="maskSelect">Mask for current image</label>
           <select class="select" id="maskSelect"><option value="">No mask selected</option></select>
+          <button class="remove-mask" id="removeMask" title="Delete the selected mask PNG from the Save folder (Alt+D)">Delete mask PNG from Save folder</button>
           <div class="color-row"><input type="color" id="maskColor" value="#ff3f65"><span>Mask tint</span></div>
           <div class="toggle-row"><span>Show mask overlay</span><input class="toggle" id="showMask" type="checkbox" checked></div>
           <div class="toggle-row"><span>Nearest neighbor scaling</span><input class="toggle" id="pixelated" type="checkbox"></div>
@@ -159,14 +155,14 @@
         <div class="panel-section" style="color:var(--muted);font-size:11px;line-height:1.7">Mask PNGs are matched to images by filename. You can also choose a mask manually from the dropdown. Use the opacity slider to tune the overlay.</div>
       </aside>
     </div>
-    <div class="statusbar"><span><i class="dot"></i>Ready</span><span id="statusText">No files loaded</span><span class="status-spacer"></span><span>A / D Navigate</span><span>Alt+E Clear mask</span><span>Ctrl+Z Undo</span><span>Scroll Brush</span><span>Ctrl+Scroll Zoom</span><span>Ctrl+S Save</span></div>
+    <div class="statusbar"><span><i class="dot"></i>Ready</span><span id="statusText">No files loaded</span><span class="status-spacer"></span><span>A / D Navigate</span><span>Ctrl+Q Original preview</span><span>Alt+D Delete mask PNG</span><span>Alt+E Clear mask</span><span>Ctrl+Z Undo</span><span>Scroll Brush</span><span>Ctrl+Scroll Zoom</span><span>Ctrl+S Save all edits</span></div>
   </div>
   <input id="imageInput" type="file" accept="image/*" multiple>
   <input id="maskInput" type="file" accept="image/png,image/*" multiple>
   <script>
     (() => {
       const images = [], masks = [], maskEdits = new Map();
-      let current = -1, mode = 'overlay', zoom = 1, panX = 0, panY = 0, editing = false, brush = 'draw', drawing = false, editLoadToken = 0, lastPointer = null;
+      let current = -1, mode = 'overlay', zoom = 1, panX = 0, panY = 0, editing = false, brush = 'draw', drawing = false, editLoadToken = 0, lastPointer = null, compareOriginal = false;
       let saveDirectory = null;
       const $ = id => document.getElementById(id);
       const imageInput = $('imageInput'), maskInput = $('maskInput');
@@ -212,7 +208,7 @@
           const pixels=ctx.getImageData(0,0,work.width,work.height), d=pixels.data;
           for(let i=0;i<d.length;i+=4){const luminance=(.2126*d[i]+.7152*d[i+1]+.0722*d[i+2])*d[i+3]/255;d[i]=255;d[i+1]=255;d[i+2]=255;d[i+3]=luminance>=128?255:0;}
           ctx.putImageData(pixels,0,0);
-          edit={canvas:work,maskUrl:mask?.url||'',undo:[]}; maskEdits.set(image.url,edit); paintEditCanvas(edit);
+          edit={canvas:work,maskUrl:mask?.url||'',undo:[],dirty:false}; maskEdits.set(image.url,edit); paintEditCanvas(edit);
         };
         if(mask){const source=new Image(); source.onload=()=>{ctx.drawImage(source,0,0,work.width,work.height); finish();}; source.onerror=finish; source.src=mask.url;}
         else finish();
@@ -263,15 +259,15 @@
         $('sideImage').src = image ? image.url : '';
         $('overlayMask').src = resolvedMask ? resolvedMask.url : '';
         $('sideMask').src = resolvedMask ? resolvedMask.url : '';
-        $('overlayMask').style.display = $('showMask').checked && resolvedMask && !maskEdits.has(image?.url) ? 'block' : 'none';
-        $('editCanvas').style.display = image ? 'block' : 'none';
+        $('overlayMask').style.display = !compareOriginal && $('showMask').checked && resolvedMask && !maskEdits.has(image?.url) ? 'block' : 'none';
+        $('editCanvas').style.display = image && !compareOriginal ? 'block' : 'none';
         $('editCanvas').style.opacity = Number($('opacitySlider').value)/100;
         $('overlayPanel').classList.toggle('editing', editing && mode==='overlay');
         updateBrushCursor(lastPointer);
         $('editToggle').classList.toggle('active', editing);
-        $('drawTool').classList.toggle('active', brush==='draw'); $('eraseTool').classList.toggle('active', brush==='erase');
-        ['editToggle','drawTool','eraseTool','saveMask','brushSize'].forEach(id=>$(id).disabled=!image);
+        ['editToggle','saveMask','brushSize'].forEach(id=>$(id).disabled=!image);
         $('sideMask').parentElement.style.display = resolvedMask ? '' : 'none';
+        $('removeMask').disabled = !resolvedMask;
         $('overlayMask').style.opacity = Number($('opacitySlider').value)/100;
         const color = $('maskColor').value; $('maskTintFlood').setAttribute('flood-color', color); $('overlayMask').style.filter = 'url(#maskTintFilter)'; $('overlayMask').style.mixBlendMode = 'normal';
         $('overlayMask').style.imageRendering = $('pixelated').checked ? 'pixelated' : 'auto'; $('sideMask').style.imageRendering = $('pixelated').checked ? 'pixelated' : 'auto';
@@ -293,22 +289,46 @@
         else if(zoom>0){panX=x-((x-rect.left)/zoom)*next-baseX;panY=y-((y-rect.top)/zoom)*next-baseY;}
         zoom=next; $('zoomLevel').textContent=`${Math.round(zoom*100)}%`; stack.style.transform=`translate(${panX}px, ${panY}px) scale(${zoom})`;
       }
-      $('addImages').onclick = $('importImages').onclick = $('welcomeImport').onclick = () => imageInput.click();
-      $('addMasks').onclick = $('importMasks').onclick = () => maskInput.click();
+      $('addImages').onclick = () => imageInput.click();
+      $('addMasks').onclick = () => maskInput.click();
       imageInput.onchange = e => { addFiles(e.target.files, images); e.target.value=''; };
       maskInput.onchange = e => { addFiles(e.target.files, masks); e.target.value=''; };
       $('clearAll').onclick = () => { [...images,...masks].forEach(f=>URL.revokeObjectURL(f.url)); images.length=0; masks.length=0; maskEdits.clear(); current=-1; editing=false; render(); };
       $('prevImage').onclick = () => navigate(-1); $('nextImage').onclick = () => navigate(1);
       $('overlayMode').onclick = () => { mode='overlay'; render(); }; $('sideMode').onclick = () => { mode='side'; render(); };
       $('maskSelect').onchange = render; $('showMask').onchange = render; $('pixelated').onchange = render; $('maskColor').oninput = render;
+      async function deleteCurrentMask(){
+        const image=images[current], mask=selectedMask(image);
+        if(!image||!mask)return;
+        if(!saveDirectory){$('statusText').textContent='Choose the Save folder first to delete mask files';return;}
+        if(!window.confirm(`Permanently delete "${mask.name}" from the Save folder (${saveDirectory.name})?`))return;
+        try{
+          let permission=await saveDirectory.queryPermission({mode:'readwrite'});
+          if(permission!=='granted')permission=await saveDirectory.requestPermission({mode:'readwrite'});
+          if(permission!=='granted'){$('statusText').textContent='Save folder write permission was not granted';return;}
+          await saveDirectory.removeEntry(mask.name);
+        }catch(error){
+          if(error.name!=='AbortError')$('statusText').textContent=error.name==='NotFoundError'?`${mask.name} was not found in the Save folder`:`Could not delete ${mask.name}: ${error.message}`;
+          return;
+        }
+        const index=masks.indexOf(mask);
+        if(index<0)return;
+        masks.splice(index,1); URL.revokeObjectURL(mask.url);
+        for(const item of images){const edit=maskEdits.get(item.url);if(edit?.maskUrl===mask.url)maskEdits.delete(item.url);}
+        $('maskSelect').value=''; editing=false; render();
+        $('statusText').textContent=`Deleted ${mask.name} from ${saveDirectory.name}`;
+      }
+      $('removeMask').onclick=deleteCurrentMask;
       $('opacitySlider').oninput = () => { $('opacityValue').textContent=`${$('opacitySlider').value}%`; render(); };
       $('editToggle').onclick=()=>{editing=!editing; render();};
-      $('drawTool').onclick=()=>{brush='draw';render();}; $('eraseTool').onclick=()=>{brush='erase';render();};
       $('editCanvas').addEventListener('pointerdown',e=>{
         if(!editing||mode!=='overlay'||current<0)return;
+        if(e.button!==0)return;
+        e.preventDefault(); brush=e.ctrlKey?'draw':'erase';
         const image=images[current], edit=maskEdits.get(image.url); if(!edit)return;
         drawing=true; snapshotMask(edit); e.currentTarget.setPointerCapture(e.pointerId); updateBrushCursor(e); stroke(e,edit);
       });
+      $('editCanvas').addEventListener('contextmenu',e=>e.preventDefault());
       $('editCanvas').addEventListener('pointerenter',e=>updateBrushCursor(e));
       $('editCanvas').addEventListener('pointermove',e=>{updateBrushCursor(e);if(drawing&&current>=0){const edit=maskEdits.get(images[current].url);if(edit)stroke(e,edit);}});
       $('editCanvas').addEventListener('pointerleave',()=>{if(!drawing)$('brushCursor').style.display='none';});
@@ -316,13 +336,13 @@
       function stroke(e,edit){
         const canvas=$('editCanvas'), rect=canvas.getBoundingClientRect(), x=(e.clientX-rect.left)/rect.width*edit.canvas.width, y=(e.clientY-rect.top)/rect.height*edit.canvas.height;
         const ctx=edit.canvas.getContext('2d'); ctx.globalCompositeOperation=brush==='erase'?'destination-out':'source-over'; ctx.fillStyle='#fff';
-        const radius=Number($('brushSize').value)/2; ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'; paintEditCanvas(edit);
+        const radius=Number($('brushSize').value)/2; ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill(); ctx.globalCompositeOperation='source-over'; edit.dirty=true; paintEditCanvas(edit);
       }
       function updateBrushCursor(e){
         const cursor=$('brushCursor'),canvas=$('editCanvas');
         if(!e){if(!editing||mode!=='overlay')cursor.style.display='none';return;}
         lastPointer={clientX:e.clientX,clientY:e.clientY};
-        if(!editing||mode!=='overlay'||!images[current]||!canvas.width){cursor.style.display='none';return;}
+        if(!editing||mode!=='overlay'||compareOriginal||!images[current]||!canvas.width){cursor.style.display='none';return;}
         const rect=canvas.getBoundingClientRect(), scale=canvas.clientWidth/canvas.width;
         cursor.style.width=cursor.style.height=`${Math.max(4,Number($('brushSize').value)*scale)}px`;
         cursor.style.left=`${(e.clientX-rect.left)/rect.width*canvas.clientWidth}px`;
@@ -331,7 +351,9 @@
       }
       async function saveMask(){
         const image=images[current], edit=image&&maskEdits.get(image.url); if(!edit)return;
-        const blob=await new Promise(resolve=>edit.canvas.toBlob(resolve,'image/png')); if(!blob)return;
+        const output=document.createElement('canvas'); output.width=edit.canvas.width; output.height=edit.canvas.height;
+        const outputContext=output.getContext('2d'); outputContext.fillStyle='#000'; outputContext.fillRect(0,0,output.width,output.height); outputContext.drawImage(edit.canvas,0,0);
+        const blob=await new Promise(resolve=>output.toBlob(resolve,'image/png')); if(!blob)return;
         const existing=selectedMask(image), suggestedName=existing?.name || image.name.replace(/\.[^.]+$/,'')+'_mask.png';
         if(saveDirectory){
           try{
@@ -340,17 +362,45 @@
             if(permission!=='granted'){$('statusText').textContent='Save folder permission was not granted';return;}
             const fileHandle=await saveDirectory.getFileHandle(suggestedName,{create:true});
             const writable=await fileHandle.createWritable(); await writable.write(blob); await writable.close();
-            $('statusText').textContent=`Saved ${suggestedName} to ${saveDirectory.name}`; return;
+            edit.dirty=false; $('statusText').textContent=`Saved ${suggestedName} to ${saveDirectory.name}`; return;
           }catch(error){$('statusText').textContent=`Could not save ${suggestedName}: ${error.message}`;return;}
         }
         if(window.showSaveFilePicker){
           try {
             const handle=await window.showSaveFilePicker({suggestedName,types:[{description:'PNG image',accept:{'image/png':['.png']}}]});
             const writable=await handle.createWritable(); await writable.write(blob); await writable.close();
-            $('statusText').textContent=`Saved ${handle.name}`; return;
+            edit.dirty=false; $('statusText').textContent=`Saved ${handle.name}`; return;
           } catch(error) { if(error.name==='AbortError')return; }
         }
-        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=suggestedName;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=suggestedName;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000); edit.dirty=false;
+      }
+      async function saveAllMasks(){
+        const pending=images.map(image=>({image,edit:maskEdits.get(image.url)})).filter(item=>item.edit?.dirty);
+        if(!pending.length){$('statusText').textContent='No edited masks to save';return;}
+        if(saveDirectory){
+          try{
+            let permission=await saveDirectory.queryPermission({mode:'readwrite'});
+            if(permission!=='granted')permission=await saveDirectory.requestPermission({mode:'readwrite'});
+            if(permission!=='granted'){$('statusText').textContent='Save folder permission was not granted';return;}
+            for(const {image,edit} of pending){
+              const output=document.createElement('canvas'); output.width=edit.canvas.width; output.height=edit.canvas.height;
+              const ctx=output.getContext('2d'); ctx.fillStyle='#000'; ctx.fillRect(0,0,output.width,output.height); ctx.drawImage(edit.canvas,0,0);
+              const blob=await new Promise(resolve=>output.toBlob(resolve,'image/png')); if(!blob)throw new Error(`Could not encode ${image.name}`);
+              const sourceMask=masks.find(mask=>mask.url===edit.maskUrl), name=sourceMask?.name||image.name.replace(/\.[^.]+$/,'')+'_mask.png';
+              const handle=await saveDirectory.getFileHandle(name,{create:true}), writable=await handle.createWritable();
+              await writable.write(blob); await writable.close(); edit.dirty=false;
+            }
+            $('statusText').textContent=`Saved ${pending.length} edited mask${pending.length===1?'':'s'} to ${saveDirectory.name}`; return;
+          }catch(error){$('statusText').textContent=`Could not save all masks: ${error.message}`;return;}
+        }
+        for(const {image,edit} of pending){
+          const output=document.createElement('canvas'); output.width=edit.canvas.width; output.height=edit.canvas.height;
+          const ctx=output.getContext('2d'); ctx.fillStyle='#000'; ctx.fillRect(0,0,output.width,output.height); ctx.drawImage(edit.canvas,0,0);
+          const blob=await new Promise(resolve=>output.toBlob(resolve,'image/png')); if(!blob)continue;
+          const sourceMask=masks.find(mask=>mask.url===edit.maskUrl), name=sourceMask?.name||image.name.replace(/\.[^.]+$/,'')+'_mask.png';
+          const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); edit.dirty=false;
+        }
+        $('statusText').textContent=`Downloaded ${pending.length} edited mask${pending.length===1?'':'s'}`;
       }
       $('saveMask').onclick=saveMask;
       $('chooseSaveFolder').onclick=async()=>{
@@ -378,11 +428,11 @@
       },{passive:false});
       $('zoomIn').onclick = () => setZoom(zoom*1.2); $('zoomOut').onclick = () => setZoom(zoom/1.2); $('fitView').onclick = () => setZoom(1,undefined,undefined,true);
       document.addEventListener('keydown', e => {
-        if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase()==='e') { e.preventDefault(); const image=images[current],edit=image&&maskEdits.get(image.url); if(edit){snapshotMask(edit);edit.canvas.getContext('2d').clearRect(0,0,edit.canvas.width,edit.canvas.height);editing=true;paintEditCanvas(edit);render();$('statusText').textContent='Mask cleared · Ctrl+Z to undo';} return; }
-        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s') { e.preventDefault(); saveMask(); return; }
+        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='q') { e.preventDefault(); compareOriginal=!compareOriginal; render(); $('statusText').textContent=compareOriginal?'Original preview · Ctrl+Q to show mask':'Mask overlay restored'; return; }
+        if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase()==='d') { e.preventDefault(); deleteCurrentMask(); return; }
+        if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase()==='e') { e.preventDefault(); const image=images[current],edit=image&&maskEdits.get(image.url); if(edit){snapshotMask(edit);edit.canvas.getContext('2d').clearRect(0,0,edit.canvas.width,edit.canvas.height);edit.dirty=true;editing=true;paintEditCanvas(edit);render();$('statusText').textContent='Mask cleared · Ctrl+Z to undo';} return; }
+        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s') { e.preventDefault(); saveAllMasks(); return; }
         if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='z') { e.preventDefault(); const image=images[current],edit=image&&maskEdits.get(image.url); if(edit&&undoMask(edit))$('statusText').textContent='Last mask stroke undone'; return; }
-        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='d') { e.preventDefault(); brush='draw'; editing=true; render(); return; }
-        if ((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='e') { e.preventDefault(); brush='erase'; editing=true; render(); return; }
         if (e.target.matches('input,select,textarea')) return;
         if (e.key.toLowerCase()==='a') navigate(-1); if (e.key.toLowerCase()==='d') navigate(1);
         if (e.key==='+'||e.key==='=') setZoom(zoom*1.2); if (e.key==='-') setZoom(zoom/1.2);
