@@ -134,7 +134,7 @@
         <div class="viewer-foot">
           <div class="nav-buttons"><button id="prevImage" title="Previous image (←)">‹</button><button id="nextImage" title="Next image (→)">›</button></div>
           <span class="position" id="position">0 / 0</span>
-          <div class="editor-tools"><button id="editToggle" title="Paint on the mask">Edit mask</button><span class="shortcut" title="Ctrl+left click draws; left click erases">Ctrl+click draw · Click erase</span><span class="shortcut">Size</span><input id="brushSize" type="range" min="1" max="200" value="24" title="Brush size in pixels; scroll over image to adjust"><button id="saveMask" title="Save the current mask PNG">Save PNG</button></div>
+          <div class="editor-tools"><span class="shortcut" title="Ctrl+left click draws; left click erases">Ctrl+click draw · Click erase</span><span class="shortcut">Size</span><input id="brushSize" type="range" min="1" max="200" value="24" title="Brush size in pixels; scroll over image to adjust"><button id="saveMask" title="Save the current mask PNG">Save PNG</button></div>
           <div class="slider-group"><span>Mask opacity</span><input id="opacitySlider" type="range" min="0" max="100" value="50"><span class="opacity-label" id="opacityValue">50%</span></div>
           <div class="zoom-controls"><button id="zoomOut" title="Zoom out">−</button><span class="zoom-level" id="zoomLevel">100%</span><button id="zoomIn" title="Zoom in">＋</button><button id="fitView" title="Fit view">Fit</button></div>
         </div>
@@ -162,7 +162,7 @@
   <script>
     (() => {
       const images = [], masks = [], maskEdits = new Map();
-      let current = -1, mode = 'overlay', zoom = 1, panX = 0, panY = 0, editing = false, brush = 'draw', drawing = false, editLoadToken = 0, lastPointer = null, compareOriginal = false;
+      let current = -1, mode = 'overlay', zoom = 1, panX = 0, panY = 0, editing = true, brush = 'draw', drawing = false, editLoadToken = 0, lastPointer = null, compareOriginal = false;
       let saveDirectory = null;
       const $ = id => document.getElementById(id);
       const imageInput = $('imageInput'), maskInput = $('maskInput');
@@ -264,8 +264,7 @@
         $('editCanvas').style.opacity = Number($('opacitySlider').value)/100;
         $('overlayPanel').classList.toggle('editing', editing && mode==='overlay');
         updateBrushCursor(lastPointer);
-        $('editToggle').classList.toggle('active', editing);
-        ['editToggle','saveMask','brushSize'].forEach(id=>$(id).disabled=!image);
+        ['saveMask','brushSize'].forEach(id=>$(id).disabled=!image);
         $('sideMask').parentElement.style.display = resolvedMask ? '' : 'none';
         $('removeMask').disabled = !resolvedMask;
         $('overlayMask').style.opacity = Number($('opacitySlider').value)/100;
@@ -293,7 +292,7 @@
       $('addMasks').onclick = () => maskInput.click();
       imageInput.onchange = e => { addFiles(e.target.files, images); e.target.value=''; };
       maskInput.onchange = e => { addFiles(e.target.files, masks); e.target.value=''; };
-      $('clearAll').onclick = () => { [...images,...masks].forEach(f=>URL.revokeObjectURL(f.url)); images.length=0; masks.length=0; maskEdits.clear(); current=-1; editing=false; render(); };
+      $('clearAll').onclick = () => { [...images,...masks].forEach(f=>URL.revokeObjectURL(f.url)); images.length=0; masks.length=0; maskEdits.clear(); current=-1; editing=true; render(); };
       $('prevImage').onclick = () => navigate(-1); $('nextImage').onclick = () => navigate(1);
       $('overlayMode').onclick = () => { mode='overlay'; render(); }; $('sideMode').onclick = () => { mode='side'; render(); };
       $('maskSelect').onchange = render; $('showMask').onchange = render; $('pixelated').onchange = render; $('maskColor').oninput = render;
@@ -315,12 +314,11 @@
         if(index<0)return;
         masks.splice(index,1); URL.revokeObjectURL(mask.url);
         for(const item of images){const edit=maskEdits.get(item.url);if(edit?.maskUrl===mask.url)maskEdits.delete(item.url);}
-        $('maskSelect').value=''; editing=false; render();
+        $('maskSelect').value=''; editing=true; render();
         $('statusText').textContent=`Deleted ${mask.name} from ${saveDirectory.name}`;
       }
       $('removeMask').onclick=deleteCurrentMask;
       $('opacitySlider').oninput = () => { $('opacityValue').textContent=`${$('opacitySlider').value}%`; render(); };
-      $('editToggle').onclick=()=>{editing=!editing; render();};
       $('editCanvas').addEventListener('pointerdown',e=>{
         if(!editing||mode!=='overlay'||current<0)return;
         if(e.button!==0)return;
